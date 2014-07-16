@@ -11,4 +11,5 @@ ADD_EXECUTABLE(imagecapture
     src/chameleon.c
     src/chameleon_util.c)
 
-ADD_DEPENDENCIES(imagecapture ${LibUSB_LIBRARIES})
+TARGET_LINK_LIBRARIES(imagecapture
+    ${LibUSB_LIBRARY})

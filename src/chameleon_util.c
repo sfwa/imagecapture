@@ -43,7 +43,7 @@
 #include <math.h>
 #include <getopt.h>
 #include <endian.h>
-#include "include/chameleon_util.h"
+#include "chameleon_util.h"
 
 #define SHUTTER_MIN     0.000010
 #define SHUTTER_MAX     0.10000

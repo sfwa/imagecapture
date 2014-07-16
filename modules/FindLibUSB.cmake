@@ -1,0 +1,32 @@
+# - Try to find LibUSB
+# Once done, this will define
+#
+#  LibUSB_FOUND - system has libusb
+#  LibUSB_INCLUDE_DIRS - the libusb include directories
+#  LibUSB_LIBRARIES - link these to use libusb
+
+include(LibFindMacros)
+
+# Use pkg-config to get hints about paths
+libfind_pkg_check_modules(LibUSB_PKGCONF libusb)
+
+# Include dir
+find_path(LibUSB_INCLUDE_DIR
+  NAMES libusb.h
+  PATHS ${LibUSB_PKGCONF_INCLUDE_DIRS}
+  PATH_SUFFIXES libusb-1.0
+)
+
+# Finally the library itself
+find_library(LibUSB_LIBRARY
+  NAMES usb
+  PATHS ${LibUSB_PKGCONF_LIBRARY_DIRS}
+)
+
+# Set the include dir variables and the libraries and let libfind_process do the rest.
+# NOTE: Singular variables for this library, plural for libraries this this lib depends on.
+set(LibUSB_PROCESS_INCLUDES LibUSB_INCLUDE_DIR)
+set(LibUSB_PROCESS_LIBS LibUSB_LIBRARY)
+libfind_process(LibUSB)
+
+

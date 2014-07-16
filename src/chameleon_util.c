@@ -437,11 +437,11 @@ int capture_wait(chameleon_camera_t *c, float *shutter,
 	(*frame_counter) = ntohl(frame_info[2]);
 	//printf("frame_counter=%u\n", *frame_counter);
 	
-	if (__BYTE_ORDER == __LITTLE_ENDIAN && pixel_width == 2) {
-		swab(frame->image, buf, frame->total_bytes);
-	} else {
-		memcpy(buf, frame->image, frame->total_bytes);
-	}
+	//if (__BYTE_ORDER == __LITTLE_ENDIAN && pixel_width == 2) {
+	//	swab(frame->image, buf, frame->total_bytes);
+	//} else {
+	memcpy(buf, frame->image, frame->total_bytes);
+	//}
 
 	// overwrite the frame_info values with the next bytes, so we
 	// don't skew the image stats

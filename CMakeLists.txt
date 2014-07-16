@@ -8,6 +8,7 @@ FIND_PACKAGE(LibUSB REQUIRED)
 INCLUDE_DIRECTORIES(include ${LibUSB_INCLUDE_DIRS})
 
 ADD_EXECUTABLE(imagecapture
+    src/main.c
     src/chameleon.c
     src/chameleon_util.c)
 

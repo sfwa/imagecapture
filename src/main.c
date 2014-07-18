@@ -48,7 +48,7 @@ int main(int argc, char** argv) {
     uint32_t camera_framerate = 2;
 
     if (argc < 2) {
-        printf("Usage: fcsdump /PATH/TO/DIR");
+        printf("Usage: imagecapture /PATH/TO/DIR\n");
         return 1;
     }
 

@@ -14,3 +14,5 @@ ADD_EXECUTABLE(imagecapture
 
 TARGET_LINK_LIBRARIES(imagecapture
     ${LibUSB_LIBRARY})
+
+INSTALL(TARGETS imagecapture DESTINATION bin)

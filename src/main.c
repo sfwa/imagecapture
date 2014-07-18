@@ -125,9 +125,9 @@ int main(int argc, char** argv) {
             /* Dump all telemetry since last image to a temporary file. */
             char telemetry_temp_fname[64];
             char telemetry_fname[64];
-            sprintf(telemetry_temp_fname, "%s/telem%d.pgm~", dname,
+            sprintf(telemetry_temp_fname, "%s/telem%d.txt~", dname,
                 frame_counter);
-            sprintf(telemetry_fname, "%s/telemetry%d.pgm", dname,
+            sprintf(telemetry_fname, "%s/telem%d.txt", dname,
                 frame_counter);
             FILE *telemetry_file = fopen(telemetry_temp_fname, "wb");
 

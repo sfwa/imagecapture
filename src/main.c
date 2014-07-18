@@ -48,11 +48,12 @@ int main(int argc, char** argv) {
     uint32_t camera_framerate = 2;
 
     if (argc < 2) {
-        printf("Usage: fcsdump tty");
+        printf("Usage: fcsdump /PATH/TO/DIR");
         return 1;
     }
 
-    char template[] = "images-XXXXXX";
+    char template[128];
+    snprintf(template, 128, "%s/images-XXXXXX", argv[1]);
     char *dname = mkdtemp(template);
 
     if (!dname) {
@@ -61,9 +62,9 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    int ifd1 = open(argv[1], O_RDWR | O_NOCTTY | O_NDELAY);
+    int ifd1 = open("/dev/ttySAC0", O_RDWR | O_NOCTTY | O_NDELAY);
     if (ifd1 < 0) {
-        printf("error %d opening %s: %s\n", errno, argv[1], strerror(errno));
+        printf("error %d opening /dev/ttySAC0: %s\n", errno, strerror(errno));
         return 1;
     }
 
@@ -104,15 +105,17 @@ int main(int argc, char** argv) {
         }
 
         if (!ret) {
-            char image_temp_fname[64];
-            char image_fname[64];
-            sprintf(image_temp_fname, "%s/img%d.pgm~", dname, frame_counter);
-            sprintf(image_fname, "%s/img%d.pgm", dname, frame_counter);
+            char image_temp_fname[128];
+            char image_fname[128];
+            snprintf(image_temp_fname, 128, "%s/img%d.pgm~", dname,
+                frame_counter);
+            snprintf(image_fname, 128, "%s/img%d.pgm", dname,
+                frame_counter);
             FILE *image_file = fopen(image_temp_fname, "wb");
 
             /* Write PGM header information. */
             char pgm_header[64];
-            int len = sprintf(pgm_header, "P5\n%d\n%d\n65535\n",
+            int len = snprintf(pgm_header, 64, "P5\n%d\n%d\n65535\n",
                 IMG_WIDTH, IMG_HEIGHT);
             fwrite(pgm_header, sizeof(char), len, image_file);
 
@@ -123,11 +126,11 @@ int main(int argc, char** argv) {
             fclose(image_file);
 
             /* Dump all telemetry since last image to a temporary file. */
-            char telemetry_temp_fname[64];
-            char telemetry_fname[64];
-            sprintf(telemetry_temp_fname, "%s/telem%d.txt~", dname,
+            char telemetry_temp_fname[128];
+            char telemetry_fname[128];
+            snprintf(telemetry_temp_fname, 128, "%s/telem%d.txt~", dname,
                 frame_counter);
-            sprintf(telemetry_fname, "%s/telem%d.txt", dname,
+            snprintf(telemetry_fname, 128, "%s/telem%d.txt", dname,
                 frame_counter);
             FILE *telemetry_file = fopen(telemetry_temp_fname, "wb");
 

@@ -6,10 +6,10 @@
 #include <string.h>
 #include <fcntl.h>
 #include <stdint.h>
+#include <poll.h>
 #include "chameleon_util.h"
 
-#define RD_BUFSIZE 256u
-#define WR_BUFSIZE 256u
+#define RD_BUFSIZE 32768u
 
 #define IMG_WIDTH 1280u
 #define IMG_HEIGHT 960u
@@ -46,27 +46,39 @@ int set_interface_attribs(int fd, int speed) {
 int main(int argc, char** argv) {
     uint32_t camera_brightness = 100;
     uint32_t camera_framerate = 2;
-/*
+
     if (argc < 2) {
-        printf("Usage: fcsdump /PATH/TO/DIR");
+        printf("Usage: fcsdump tty");
         return 1;
     }
 
-    char *fname = tempnam(argv[1], "fcs-");
-    FILE *f1;
-    f1 = fopen(fname, "wb");
+    char template[] = "images-XXXXXX";
+    char *dname = mkdtemp(template);
 
-    int ifd1 = open("/dev/ttySAC0", O_RDWR | O_NOCTTY | O_NDELAY);
+    if (!dname) {
+        printf("error %d creating random directory: %s\n",
+            errno, strerror(errno));
+        return 1;
+    }
+
+    int ifd1 = open(argv[1], O_RDWR | O_NOCTTY | O_NDELAY);
     if (ifd1 < 0) {
-        printf("error %d opening /dev/ttySAC0: %s", errno, strerror(errno));
+        printf("error %d opening %s: %s\n", errno, argv[1], strerror(errno));
         return 1;
     }
 
-    set_interface_attribs(ifd1, 921600);
+    int flags = fcntl(ifd1, F_GETFL, 0);
+    if(fcntl(ifd1, F_SETFL, flags | O_NONBLOCK)) {
+        printf("error %d setting socket to non-blocking mode: %s\n", errno,
+            strerror(errno));
+        return 1;
+    }
 
-    uint64_t n_written = 0;
+    set_interface_attribs(ifd1, 115200);
+
+    uint32_t tail = 0;
     char *buf = malloc(RD_BUFSIZE);
-*/
+
     chameleon_camera_t *camera = open_camera(1, 16, camera_brightness);
     if (camera == NULL) {
         printf("error opening camera\n");
@@ -80,24 +92,22 @@ int main(int argc, char** argv) {
     trigger_capture(camera, 0, 1);
 
     while (1) {
-/*
-        int n = read(ifd1, buf, RD_BUFSIZE);
+        /* Check for a new image, 10ms timeout. */
+        int ret = capture_wait(camera, &shutter, image_buf,
+            sizeof(uint16_t), (sizeof(uint16_t) * IMG_WIDTH * IMG_HEIGHT),
+            10, &frame_time, &frame_counter);
+
+        /* Non-blocking telemetry read. */
+        int n = read(ifd1, &buf[tail], RD_BUFSIZE);
         if (n > 0) {
-            fwrite(buf, 1, n, f1);
-            n_written += n;
+            tail += n;
         }
-        if (n_written > 1024) {
-            fflush(f1);
-        }
-*/
-        /* Check for a new image without blocking. */
-        if (!capture_wait(camera, &shutter, image_buf, sizeof(uint16_t), 
-                (sizeof(uint16_t) * IMG_WIDTH * IMG_HEIGHT), 0,
-                &frame_time, &frame_counter)) {
+
+        if (!ret) {
             char image_temp_fname[64];
             char image_fname[64];
-            sprintf(image_temp_fname, "img%d.pgm~", frame_counter);
-            sprintf(image_fname, "img%d.pgm", frame_counter);
+            sprintf(image_temp_fname, "%s/img%d.pgm~", dname, frame_counter);
+            sprintf(image_fname, "%s/img%d.pgm", dname, frame_counter);
             FILE *image_file = fopen(image_temp_fname, "wb");
 
             /* Write PGM header information. */
@@ -110,10 +120,36 @@ int main(int argc, char** argv) {
             fwrite(image_buf, sizeof(uint16_t), (IMG_WIDTH * IMG_HEIGHT),
                 image_file);
             fflush(image_file);
-            
-            /* Dump all telemetry since the last image to a temporary file. */
+            fclose(image_file);
+
+            /* Dump all telemetry since last image to a temporary file. */
+            char telemetry_temp_fname[64];
+            char telemetry_fname[64];
+            sprintf(telemetry_temp_fname, "%s/telem%d.pgm~", dname,
+                frame_counter);
+            sprintf(telemetry_fname, "%s/telemetry%d.pgm", dname,
+                frame_counter);
+            FILE *telemetry_file = fopen(telemetry_temp_fname, "wb");
+
+            /* Find the last packet boundary. */
+            uint32_t buf_len = 0;
+            int i;
+            for (i = tail-2; i >= 0; i--) {
+                if (buf[i] == 0x00 && buf[i+1] == 0x00) {
+                    buf_len = i+2;
+                    break;
+                }
+            }
+            fwrite(buf, sizeof(char), buf_len, telemetry_file);
+            fflush(telemetry_file);
+            fclose(telemetry_file);
+
+            /* Relocate the remainder to the start of the buffer. */
+            memcpy(buf, &buf[i+2], tail-buf_len);
+            tail -= buf_len;
 
             /* Rename the image and telemetry files. */
+            rename(telemetry_temp_fname, telemetry_fname);
             rename(image_temp_fname, image_fname);
         }
     }
